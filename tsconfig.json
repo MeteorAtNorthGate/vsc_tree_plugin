@@ -32,7 +32,7 @@
     // ============================================
     // 5. 编译性能与风格约束 (保留你 init 生成的现代配置)
     // ============================================
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
