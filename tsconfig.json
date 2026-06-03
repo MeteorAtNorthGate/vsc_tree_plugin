@@ -1,44 +1,50 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    // "rootDir": "./src",
-    // "outDir": "./dist",
+    // ============================================
+    // 1. VS Code 插件核心目录配置 (必须取消注释)
+    // ============================================
+    "rootDir": "./src",
+    "outDir": "./out",
 
-    // Environment Settings
-    // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
-    "types": [],
-    // For nodejs:
-    // "lib": ["esnext"],
-    // "types": ["node"],
-    // and npm install -D @types/node
+    // ============================================
+    // 2. 环境与模块设置 (适配 VS Code 运行环境)
+    // ============================================
+    // VS Code 插件系统默认以 CommonJS 规范加载代码
+    "module": "CommonJS",
+    // 较新的 VS Code 使用 Node 16/18，ES2022 是很标准的目标
+    "target": "ES2022",
+    "lib": ["ES2022"],
 
-    // Other Outputs
+    // ============================================
+    // 3. 输出源文件映射 (方便打断点调试)
+    // ============================================
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
 
-    // Stricter Typechecking Options
+    // ============================================
+    // 4. 严格的类型检查 (保留你 init 生成的现代配置)
+    // ============================================
+    "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
 
-    // Style Options
-    // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
-    // "noUnusedLocals": true,
-    // "noUnusedParameters": true,
-    // "noFallthroughCasesInSwitch": true,
-    // "noPropertyAccessFromIndexSignature": true,
-
-    // Recommended Options
-    "strict": true,
-    "jsx": "react-jsx",
+    // ============================================
+    // 5. 编译性能与风格约束 (保留你 init 生成的现代配置)
+    // ============================================
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true,
-  }
+    // 极力推荐：跳过对 node_modules 中 .d.ts 的类型检查，大幅提升编译速度
+    "skipLibCheck": true
+  },
+  
+  // ============================================
+  // 6. 排除不需要编译的目录
+  // ============================================
+  "exclude": [
+    "node_modules",
+    ".vscode-test"
+  ]
 }
