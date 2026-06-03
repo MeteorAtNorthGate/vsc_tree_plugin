@@ -1,0 +1,21 @@
+{
+  "scopeName": "source.tree",
+  "patterns": [
+    {
+      "match": "(#.*)$",
+      "name": "comment.line.number-sign.tree"
+    },
+    {
+      "match": "[│├└─\\s]+",
+      "name": "keyword.control.tree"
+    },
+    {
+      "match": "([^│├└─\\s#]+?/)",
+      "name": "entity.name.section.tree"
+    },
+    {
+      "match": "([^│├└─\\s#]+)(?=\\s*#|$)",
+      "name": "string.unquoted.tree"
+    }
+  ]
+}

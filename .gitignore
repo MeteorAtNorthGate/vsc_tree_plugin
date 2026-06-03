@@ -1,0 +1,42 @@
+# venv and IDE
+.venv/
+.idea/
+local_packages/
+.continue/
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*:Zone.Identifier
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# cache
+__pycache__/
+
+#cprofiles
+*.prof
+
+# build and packages
+build/
+dist/
+
+llm_api.tar.gz
+
+node_modules/
+dist-ssr/
+frontend/*.local
+
+# keys
+.env
+.env.local
+
+# Agents
+.codex
+Plans/
+.aider.conf.yml
+.aider*
