@@ -32,7 +32,7 @@ class TreeFoldingProvider implements vscode.FoldingRangeProvider {
                 const depth = match[0].length / 4;
 
                 // 遇到同级或更高级别的节点，结算之前的折叠区间
-                while (stack.length > 0 && stack[stack.length - 1].depth >= depth) {
+                while (stack.length > 0 && stack[stack.length - 1]!.depth >= depth) {
                     const prev = stack.pop();
                     if (prev && prev.line < i - 1) {
                         ranges.push(new vscode.FoldingRange(prev.line, i - 1));
@@ -59,12 +59,12 @@ class TreeFoldingProvider implements vscode.FoldingRangeProvider {
 
 async function generateTreeFile() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders) {
+    // 增加 length 校验，并使用 !
+    if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showErrorMessage('No workspace is currently open.');
         return;
     }
-
-    const rootPath = workspaceFolders[0].uri.fsPath;
+    const rootPath = workspaceFolders[0]!.uri.fsPath;
     const outputPath = path.join(rootPath, 'tree.tree');
 
     // 预设过滤表
@@ -110,17 +110,17 @@ async function generateTreeFile() {
             const connector = isLast ? '└── ' : '├── ';
             const childPrefix = prefix + (isLast ? '    ' : '│   ');
 
-            if (item.isDirectory()) {
-                output += `${prefix}${connector}${item.name}/\n`;
-                if (isIgnored(item.name)) {
+            if (item!.isDirectory()) {
+                output += `${prefix}${connector}${item!.name}/\n`;
+                if (isIgnored(item!.name)) {
                     // 重型文件夹：输出最外层名称并用省略号替代内容
                     output += `${childPrefix}└── ...\n`;
                 } else {
-                    buildTree(path.join(dirPath, item.name), childPrefix);
+                    buildTree(path.join(dirPath, item!.name), childPrefix);
                 }
             } else {
-                if (!isIgnored(item.name)) {
-                    output += `${prefix}${connector}${item.name}\n`;
+                if (!isIgnored(item!.name)) {
+                    output += `${prefix}${connector}${item!.name}\n`;
                 }
             }
         }
