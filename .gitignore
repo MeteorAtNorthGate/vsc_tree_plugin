@@ -31,6 +31,8 @@ node_modules/
 dist-ssr/
 frontend/*.local
 
+/out/
+
 # keys
 .env
 .env.local

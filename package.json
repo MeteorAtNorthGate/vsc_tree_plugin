@@ -1,13 +1,43 @@
 {
   "name": "vsc_tree_plugin",
+  "displayName": "Tree Generator",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Generate tree.tree file and provide syntax highlighting",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tree",
+        "extensions": [".tree"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tree",
+        "scopeName": "source.tree",
+        "path": "./syntaxes/tree.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "tree-generator.generateTree",
+        "title": "Generate Tree File"
+      }
+    ]
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
   },
   "keywords": [],
-  "author": "",
+  "author": "Northengate",
   "license": "ISC",
   "devEngines": {
     "packageManager": {
@@ -16,10 +46,10 @@
       "onFail": "download"
     }
   },
-  "type": "module",
+  "type": "commonjs",
   "devDependencies": {
-    "@types/node": "25.9.1",
-    "@types/vscode": "1.120.0",
-    "typescript": "6.0.3"
+    "@types/node": "^25.9.1",
+    "@types/vscode": "^1.120.0",
+    "typescript": "^6.0.3"
   }
 }
