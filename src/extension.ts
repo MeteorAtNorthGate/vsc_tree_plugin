@@ -3,15 +3,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 export function activate(context: vscode.ExtensionContext) {
-    // 注册 .tree 文件的自定义折叠规则
     const foldingProvider = vscode.languages.registerFoldingRangeProvider(
         { language: 'tree' },
         new TreeFoldingProvider()
     );
 
-    // 注册生成树形命令
-    const generateCommand = vscode.commands.registerCommand('tree-generator.generateTree', async () => {
-        await generateTreeFile();
+    // 修改：允许接收右键菜单传入的 uri 参数
+    const generateCommand = vscode.commands.registerCommand('tree-generator.generateTree', async (uri?: vscode.Uri) => {
+        await generateTreeFile(uri);
     });
 
     context.subscriptions.push(foldingProvider, generateCommand);
@@ -26,12 +25,10 @@ class TreeFoldingProvider implements vscode.FoldingRangeProvider {
             const text = document.lineAt(i).text;
             if (!text.trim()) continue;
 
-            // 通过匹配前缀来计算树结构的深度 (4个字符为一个缩进层级)
             const match = text.match(/^(?:[│\s]   )*(?:├──|└──)/);
             if (match) {
                 const depth = match[0].length / 4;
 
-                // 遇到同级或更高级别的节点，结算之前的折叠区间
                 while (stack.length > 0 && stack[stack.length - 1]!.depth >= depth) {
                     const prev = stack.pop();
                     if (prev && prev.line < i - 1) {
@@ -40,12 +37,10 @@ class TreeFoldingProvider implements vscode.FoldingRangeProvider {
                 }
                 stack.push({ line: i, depth });
             } else if (text.match(/^[^\s│├└]/)) {
-                // 根节点
                 stack.push({ line: i, depth: 0 });
             }
         }
 
-        // 结算剩余未闭合的节点
         while (stack.length > 0) {
             const prev = stack.pop();
             if (prev && prev.line < document.lineCount - 1) {
@@ -57,47 +52,107 @@ class TreeFoldingProvider implements vscode.FoldingRangeProvider {
     }
 }
 
-async function generateTreeFile() {
+async function generateTreeFile(uri?: vscode.Uri) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    // 增加 length 校验，并使用 !
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('No workspace is currently open.');
-        return;
-    }
-    const rootPath = workspaceFolders[0]!.uri.fsPath;
-    const outputPath = path.join(rootPath, 'tree.tree');
+    const workspaceRoot = workspaceFolders && workspaceFolders[0] ? workspaceFolders[0].uri.fsPath : undefined;
 
-    // 预设过滤表
+    let currentRoot: string;
+
+    // 1. 确定当前生成树的父节点路径
+    if (uri && uri.fsPath) {
+        try {
+            const stats = fs.statSync(uri.fsPath);
+            if (stats.isDirectory()) {
+                currentRoot = uri.fsPath;
+            } else {
+                currentRoot = path.dirname(uri.fsPath);
+            }
+        } catch {
+            if (!workspaceRoot) return;
+            currentRoot = workspaceRoot;
+        }
+    } else {
+        // 快捷键或命令面板触发，且无激活文件时， fallback 到工作区根目录
+        if (!workspaceRoot) {
+            vscode.window.showErrorMessage('No workspace is currently open.');
+            return;
+        }
+        currentRoot = workspaceRoot;
+    }
+
+    const outputPath = path.join(currentRoot, 'tree.tree');
+
+    // 2. 预设重型文件夹过滤表
     let ignores: string[] = ['.git', '.venv', 'node_modules', '__pycache__', 'dist', 'build'];
     
-    // 尝试合并 .gitignore 中的规则
-    const gitignorePath = path.join(rootPath, '.gitignore');
-    if (fs.existsSync(gitignorePath)) {
+    // 3. 【核心设计】小心处理 .gitignore 路径定位与路径计算
+    let gitignorePath = '';
+    let gitignoreBaseDir = currentRoot;
+
+    // 策略：从当前树的根节点开始逐级向上查找，直到工作区根目录，寻找最近的 .gitignore
+    let checkDir = currentRoot;
+    while (checkDir) {
+        const potentialGitignore = path.join(checkDir, '.gitignore');
+        if (fs.existsSync(potentialGitignore)) {
+            gitignorePath = potentialGitignore;
+            gitignoreBaseDir = checkDir;
+            break;
+        }
+        if (workspaceRoot && checkDir === workspaceRoot) {
+            break;
+        }
+        const parent = path.dirname(checkDir);
+        if (parent === checkDir) break; // 已到达操作系统根驱动器
+        checkDir = parent;
+    }
+
+    // 降级策略：如果在上溯过程中没找到，且存在工作区，直接看一眼工作区根目录
+    if (!gitignorePath && workspaceRoot && fs.existsSync(path.join(workspaceRoot, '.gitignore'))) {
+        gitignorePath = path.join(workspaceRoot, '.gitignore');
+        gitignoreBaseDir = workspaceRoot;
+    }
+
+    // 加载 .gitignore 的规则
+    if (gitignorePath) {
         const gitignoreContent = fs.readFileSync(gitignorePath, 'utf-8');
         const customIgnores = gitignoreContent.split('\n')
             .map(line => line.trim())
             .filter(line => line && !line.startsWith('#'))
-            .map(line => line.replace(/\/$/, '')); // 移除末尾斜杠以方便比对
+            .map(line => line.replace(/\/$/, ''));
         ignores = [...new Set([...ignores, ...customIgnores])];
     }
 
-    // 简易的忽略匹配器
-    const isIgnored = (name: string) => ignores.some(ig => {
-        const regex = new RegExp('^' + ig.replace(/\*/g, '.*').replace(/\?/g, '.') + '$');
-        return name === ig || regex.test(name);
-    });
+    // 4. 精准匹配器：融合绝对名字匹配与相对路径匹配
+    const isIgnored = (itemName: string, itemFullPath: string) => {
+        // 计算相对于 .gitignore 所在基准目录的相对路径，并将 Windows 的 \ 统一转化为 Git 标准的 /
+        const relativePath = path.relative(gitignoreBaseDir, itemFullPath).replace(/\\/g, '/');
+        
+        return ignores.some(ig => {
+            const rule = ig.replace(/\/$/, '');
+            
+            // 规则 A：文件名或文件夹名直接匹配 (例如: 'node_modules')
+            if (itemName === rule) return true;
+            
+            // 规则 B：相对路径精准匹配 (例如: 'apps/web-client/dist')
+            if (relativePath === rule) return true;
+            
+            // 规则 C：通配符转正则表达式模糊匹配
+            const regexStr = '^' + rule.replace(/\./g, '\\.').replace(/\*/g, '.*').replace(/\?/g, '.') + '($|/)';
+            const regex = new RegExp(regexStr);
+            return regex.test(itemName) || regex.test(relativePath);
+        });
+    };
 
-    let output = `${path.basename(rootPath)}/\n`;
+    let output = `${path.basename(currentRoot)}/\n`;
 
     function buildTree(dirPath: string, prefix: string) {
         let items: fs.Dirent[];
         try {
             items = fs.readdirSync(dirPath, { withFileTypes: true });
         } catch {
-            return; // 忽略无权限读取的目录
+            return;
         }
 
-        // 文件夹优先，按字母排序
         items.sort((a, b) => {
             if (a.isDirectory() && !b.isDirectory()) return -1;
             if (!a.isDirectory() && b.isDirectory()) return 1;
@@ -105,32 +160,32 @@ async function generateTreeFile() {
         });
 
         for (let i = 0; i < items.length; i++) {
-            const item = items[i];
+            const item = items[i]!;
             const isLast = i === items.length - 1;
             const connector = isLast ? '└── ' : '├── ';
             const childPrefix = prefix + (isLast ? '    ' : '│   ');
+            
+            const itemFullPath = path.join(dirPath, item.name);
 
-            if (item!.isDirectory()) {
-                output += `${prefix}${connector}${item!.name}/\n`;
-                if (isIgnored(item!.name)) {
-                    // 重型文件夹：输出最外层名称并用省略号替代内容
+            if (item.isDirectory()) {
+                output += `${prefix}${connector}${item.name}/\n`;
+                if (isIgnored(item.name, itemFullPath)) {
                     output += `${childPrefix}└── ...\n`;
                 } else {
-                    buildTree(path.join(dirPath, item!.name), childPrefix);
+                    buildTree(itemFullPath, childPrefix);
                 }
             } else {
-                if (!isIgnored(item!.name)) {
-                    output += `${prefix}${connector}${item!.name}\n`;
+                if (!isIgnored(item.name, itemFullPath)) {
+                    output += `${prefix}${connector}${item.name}\n`;
                 }
             }
         }
     }
 
-    buildTree(rootPath, '');
+    buildTree(currentRoot, '');
 
     fs.writeFileSync(outputPath, output, 'utf-8');
     
-    // 自动打开生成的文件
     const doc = await vscode.workspace.openTextDocument(outputPath);
     vscode.window.showTextDocument(doc);
 }

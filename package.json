@@ -29,7 +29,16 @@
         "command": "tree-generator.generateTree",
         "title": "Generate Tree File"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "tree-generator.generateTree",
+          "group": "navigation",
+          "title": "Generate Tree"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",
@@ -37,7 +46,7 @@
     "watch": "tsc -watch -p ./"
   },
   "keywords": [],
-  "author": "Northengate",
+  "author": "MeteorAtNorthGate",
   "license": "ISC",
   "devEngines": {
     "packageManager": {
