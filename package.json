@@ -1,7 +1,10 @@
 {
-  "name": "vsc_tree_plugin",
-  "displayName": "Tree Generator",
+  "name": "vsc_tree_generator",
+  "displayName": "Repo Tree Generator",
+  "publisher":"MeteorAtNorthGate",
+  "repository":"https://github.com/MeteorAtNorthGate/vsc_tree_plugin.git",
   "version": "1.0.0",
+  "icon":"tree_plugin.png",
   "description": "Generate tree.tree file and provide syntax highlighting",
   "engines": {
     "vscode": "^1.80.0"
