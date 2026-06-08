@@ -1,5 +1,5 @@
 {
-  "name": "vsc_tree_generator",
+  "name": "vsc-tree-generator",
   "displayName": "Repo Tree Generator",
   "publisher":"MeteorAtNorthGate",
   "repository":"https://github.com/MeteorAtNorthGate/vsc_tree_plugin.git",
@@ -50,18 +50,11 @@
   },
   "keywords": [],
   "author": "MeteorAtNorthGate",
-  "license": "ISC",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "11.5.1",
-      "onFail": "download"
-    }
-  },
+  "license": "Apache-2.0",
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^25.9.1",
-    "@types/vscode": "^1.120.0",
+    "@types/vscode": "^1.80.0",
     "typescript": "^6.0.3"
   }
 }
